@@ -1,7 +1,11 @@
 import { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import AuthContext from "../context/AuthContext";
+import { login } from "../context/AuthAction";
 
-function LoginPage() {
+function HomePage() {
+  const { user, dispatch } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -16,12 +20,23 @@ function LoginPage() {
       [e.target.id]: e.target.value,
     }));
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (email === "" || password === "") {
       toast.error("Fill all fields");
     } else {
+      const data = await login(formData);
+
+      if (data.success) {
+        dispatch({ type: "LOGIN", payload: data });
+        const userData = data.user.role;
+
+        userData === "student" ? navigate("/student") : navigate("/admin");
+      } else {
+        toast.error(data.message);
+      }
     }
   };
 
@@ -94,4 +109,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default HomePage;

@@ -33,7 +33,7 @@ const register = asyncHandler(async (req, res, next) => {
   return res.status(200).json({ message: "user registered", user: user });
 });
 
-const login = asyncHandler(async (req, res, next) => {
+const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   const error = validationResult(req);
@@ -50,23 +50,50 @@ const login = asyncHandler(async (req, res, next) => {
     const accessToken = jwt.sign(
       {
         user: {
-          username: user.username,
+          role: user.role,
           email: user.email,
+          name: user.name,
           id: user.id,
         },
       },
       process.env.ACCESS_TOKEN_SECRET,
       {
-        expiresIn: "10h",
+        expiresIn: "1m",
       }
     );
-    res.status(200).json({ message: "Login Successful", token: accessToken });
+    res
+      .status(200)
+      .json({ message: "Login Successful", token: accessToken, user: user });
   } else {
-    return res.status(401).json({ msg: "Invalid email or password" });
+    return res.status(401).json({ message: "Invalid email or password" });
+  }
+});
+
+// auth status
+const authStatus = asyncHandler(async (req, res) => {
+  const authHeader = req.header("Authorization");
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ auth: false, message: "No token provided" });
+  }
+
+  const token = authHeader.split(" ")[1]; // Extract the token
+
+  try {
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET); // Verify JWT
+
+    if (decoded.exp * 1000 < Date.now()) {
+      return res.status(401).json({ auth: false, message: "Token expired" });
+    }
+
+    return res.status(200).json({ auth: true, user: decoded });
+  } catch (error) {
+    return res.status(401).json({ auth: false, message: "Invalid token" });
   }
 });
 
 module.exports = {
   login,
   register,
+  authStatus,
 };

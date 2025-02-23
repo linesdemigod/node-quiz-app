@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const { validationResult } = require("express-validator");
 const { sequelize } = require("../config/dbConnection");
 const { Question, Option, Quiz } = require("../models");
+const { Op } = require("sequelize");
 
 // Fetch Questions with Options
 const fetchQuestions = asyncHandler(async (req, res) => {
@@ -67,12 +68,12 @@ const fetchQuestions = asyncHandler(async (req, res) => {
   }
 });
 
-const quizQuestions = asyncHandler(async (req, res) => {
+const getQuestions = asyncHandler(async (req, res) => {
   // Validate request parameters
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
+  // const errors = validationResult(req);
+  // if (!errors.isEmpty()) {
+  //   return res.status(400).json({ errors: errors.array() });
+  // }
 
   try {
     const quizId = req.params.quizId;
@@ -92,7 +93,7 @@ const quizQuestions = asyncHandler(async (req, res) => {
           attributes: ["id", "optionText", "questionId"],
           required: false,
         },
-        ,
+
         {
           model: Quiz,
           as: "quiz",
@@ -102,17 +103,29 @@ const quizQuestions = asyncHandler(async (req, res) => {
       ],
     });
 
-    return res.status(200).json(questions);
+    return res.status(200).json({ questions: questions });
   } catch (error) {
     console.error("Error fetching questions:", error.message);
     return res.status(500).json({ message: "Server Error" });
   }
 });
 
+const quizAnswer = asyncHandler(async (req, res) => {
+  const { q, id } = req.query;
+
+  const option = await Option.findOne({
+    where: {
+      [Op.and]: [{ id: id }, { questionId: q }],
+    },
+  });
+
+  return res.status(200).json({ option: option });
+});
+
 const showQuestion = asyncHandler(async (req, res) => {
   const questionId = req.params.questionId;
 
-  const question = Question.findOne({
+  const question = await Question.findOne({
     where: {
       id: questionId,
     },
@@ -122,6 +135,8 @@ const showQuestion = asyncHandler(async (req, res) => {
       attributes: ["id", "optionText", "questionId"],
     },
   });
+
+  return res.status(200).json({ question: question });
 });
 
 const createQuestion = asyncHandler(async (req, res) => {
@@ -143,8 +158,6 @@ const createQuestion = asyncHandler(async (req, res) => {
         transaction,
       }
     );
-
-    console.log(option_text);
 
     await Promise.all(
       option_text.map((option, index) =>
@@ -173,7 +186,7 @@ const createQuestion = asyncHandler(async (req, res) => {
 
 const updateQuestion = asyncHandler(async (req, res) => {
   const questionId = req.params.questionId;
-  const { quiz_id, question_text, option_text, is_correct } = req.body;
+  const { question_text, option_text, is_correct } = req.body;
 
   // Validate request data
   const errors = validationResult(req);
@@ -193,7 +206,6 @@ const updateQuestion = asyncHandler(async (req, res) => {
     // Update the question inside the transaction
     await question.update(
       {
-        quizId: quiz_id,
         questionText: question_text,
       },
       { transaction }
@@ -278,9 +290,10 @@ const deleteQuestion = asyncHandler(async (req, res) => {
 
 module.exports = {
   fetchQuestions,
-  quizQuestions,
+  getQuestions,
   showQuestion,
   createQuestion,
   updateQuestion,
   deleteQuestion,
+  quizAnswer,
 };

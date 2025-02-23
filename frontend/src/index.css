@@ -10,3 +10,7 @@
   --color-warning: #f1c40f;
   --color-info: #0369a1;
 }
+
+.container {
+  @apply max-w-7xl mx-auto p-4;
+}

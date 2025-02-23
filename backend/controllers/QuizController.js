@@ -8,7 +8,7 @@ const Quiz = require("../models/Quiz");
 const getQuiz = asyncHandler(async (req, res) => {
   // introduce pagination later
   const quizzes = await Quiz.findAll();
-  res.status(200).json(quizzes);
+  return res.status(200).json({ quizzes: quizzes });
 });
 
 // create quiz
@@ -29,6 +29,14 @@ const createQuiz = asyncHandler(async (req, res) => {
   });
 
   return res.status(201).json({ message: "Created successfully", quiz: quiz });
+});
+
+const showQuiz = asyncHandler(async (req, res) => {
+  const quiz = await Quiz.findOne({ where: { id: req.params.id } });
+  if (!quiz) {
+    return res.status(404).json({ message: "Quiz not found" });
+  }
+  return res.status(200).json({ quiz: quiz });
 });
 
 // update quiz
@@ -74,4 +82,5 @@ module.exports = {
   getQuiz,
   updateQuiz,
   deleteQuiz,
+  showQuiz,
 };
